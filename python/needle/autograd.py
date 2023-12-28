@@ -383,7 +383,7 @@ def compute_gradient_of_variables(output_tensor, out_grad):
     for node in reverse_topo_order:
         # Calculate adjoint of the node
         node_partial_adjoints = node_to_output_grads_list[node]
-        node_adjoint = 0
+        node_adjoint = Tensor(0, device=node.device, dtype=node.dtype, requires_grad=False)
         for partial_adjoint in node_partial_adjoints:
             node_adjoint += partial_adjoint
         node.grad = node_adjoint

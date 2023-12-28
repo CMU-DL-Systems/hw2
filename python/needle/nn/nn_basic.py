@@ -89,12 +89,12 @@ class Linear(Module):
 
         ### BEGIN YOUR SOLUTION
         self.if_bias = bias
-        self.weight = init.kaiming_uniform(in_features, out_features, nonlinearity="relu", 
-                                           device=device, dtype=dtype, requires_grad=True)
+        self.weight = Parameter(init.kaiming_uniform(in_features, out_features, nonlinearity="relu", 
+                                           device=device, dtype=dtype, requires_grad=True))
         if self.if_bias:
             self.bias = init.kaiming_uniform(out_features, 1, nonlinearity="relu", 
                                          device=device, dtype=dtype, requires_grad=True)
-            self.bias = ops.reshape(self.bias, (1, out_features))
+            self.bias = Parameter(ops.reshape(self.bias, (1, out_features)))
         ### END YOUR SOLUTION
 
     def forward(self, X: Tensor) -> Tensor:
@@ -143,10 +143,11 @@ class Sequential(Module):
 class SoftmaxLoss(Module):
     def forward(self, logits: Tensor, y: Tensor):
         ### BEGIN YOUR SOLUTION
-        y_one_hot = init.one_hot(logits.shape[-1], y)
+        y_one_hot = init.one_hot(logits.shape[-1], y, device=logits.device, dtype=logits.dtype)
         log_sum_exp = ops.logsumexp(logits, axes=(-1,))
         losses = log_sum_exp - (ops.summation(logits * y_one_hot, axes=(-1,)))
-        return ops.summation(losses) / logits.shape[0]
+        '''Notice: When the tensor is scalar, its dtype will change to float64 after compuation. So, tensor is used here'''
+        return ops.summation(losses) / Tensor(logits.shape[0], device=logits.device, dtype=logits.dtype, requires_grad=False)
         ### END YOUR SOLUTION
 
 
@@ -157,25 +158,31 @@ class BatchNorm1d(Module):
         self.eps = eps
         self.momentum = momentum
         ### BEGIN YOUR SOLUTION
-        self.weight = init.ones(1, dim, device=device, dtype=dtype, requires_grad=True)
-        self.bias = init.zeros(1, dim, device=device, dtype=dtype, requires_grad=True)
+        self.weight = Parameter(init.ones(1, dim, device=device, dtype=dtype, requires_grad=True))
+        self.bias = Parameter(init.zeros(1, dim, device=device, dtype=dtype, requires_grad=True))
         self.running_mean = init.zeros(dim, device=device, dtype=dtype, requires_grad=False)
         self.running_var = init.ones(dim, device=device, dtype=dtype, requires_grad=False)
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
         ### BEGIN YOUR SOLUTION
-        ex = ops.summation(x, axes=(0,)) / x.shape[0]
-        ex_broadcast = ops.broadcast_to(ops.reshape(ex, (1, x.shape[1])), x.shape)
-        x_minus_ex = x - ex_broadcast
-        var = ops.summation(x_minus_ex ** 2, axes=(0,)) / x.shape[0]
-        var_broadcast = ops.broadcast_to(ops.reshape(var, (1, x.shape[1])), x.shape)
+        if self.training:
+            ex = ops.summation(x, axes=(0,)) / x.shape[0]
+            ex_broadcast = ops.broadcast_to(ops.reshape(ex, (1, x.shape[1])), x.shape)
+            x_minus_ex = x - ex_broadcast
+            var = ops.summation(x_minus_ex ** 2, axes=(0,)) / x.shape[0]
+            var_broadcast = ops.broadcast_to(ops.reshape(var, (1, x.shape[1])), x.shape)
 
-        self.running_mean = (1 - self.momentum) * self.running_mean.data + self.momentum * ex.data
-        self.running_var = (1 - self.momentum) * self.running_var.data + self.momentum * var.data
+            self.running_mean = (1 - self.momentum) * self.running_mean.data + self.momentum * ex.data
+            self.running_var = (1 - self.momentum) * self.running_var.data + self.momentum * var.data
 
-        x = x_minus_ex / ((var_broadcast + self.eps) ** 0.5)
-        return ops.broadcast_to(self.weight, x.shape) * x + ops.broadcast_to(self.bias, x.shape)
+            x = x_minus_ex / ((var_broadcast + self.eps) ** 0.5)
+            return ops.broadcast_to(self.weight, x.shape) * x + ops.broadcast_to(self.bias, x.shape)
+        else:
+            running_mean_broadcast = ops.broadcast_to(ops.reshape(self.running_mean, (1, x.shape[1])), x.shape)
+            running_var_broadcast = ops.broadcast_to(ops.reshape(self.running_var, (1, x.shape[1])), x.shape)
+            x = (x - running_mean_broadcast) / ((running_var_broadcast + self.eps) ** 0.5)
+            return ops.broadcast_to(self.weight, x.shape) * x + ops.broadcast_to(self.bias, x.shape)
         ### END YOUR SOLUTION
 
 
@@ -185,8 +192,8 @@ class LayerNorm1d(Module):
         self.dim = dim
         self.eps = eps
         ### BEGIN YOUR SOLUTION
-        self.weight = init.ones(1, dim, device=device, dtype=dtype, requires_grad=True)
-        self.bias = init.zeros(1, dim, device=device, dtype=dtype, requires_grad=True)
+        self.weight = Parameter(init.ones(1, dim, device=device, dtype=dtype, requires_grad=True))
+        self.bias = Parameter(init.zeros(1, dim, device=device, dtype=dtype, requires_grad=True))
         ### END YOUR SOLUTION
 
     def forward(self, x: Tensor) -> Tensor:
