@@ -81,6 +81,7 @@ def epoch(dataloader, model, opt=None):
         loss_sum += loss.numpy()
         num_batches += 1
 
+    '''err rate should be calculated with all samples in the dataset and should not be calculated every batch first.'''
     return err_sum / len(dataloader.dataset), loss_sum / num_batches
     ### END YOUR SOLUTION
 

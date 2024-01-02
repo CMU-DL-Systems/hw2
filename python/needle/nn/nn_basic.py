@@ -221,7 +221,7 @@ class Dropout(Module):
         if self.training:
             bernoulli = np.random.binomial(1, self.p, x.shape)
             bernoulli = (np.negative(bernoulli) + 1) / (1 - self.p)
-            '''Notice: Convert it to tensor to ensure the same dtype.'''
+            '''Notice: Convert it to tensor to ensure the same dtype. Numpy array should be converted to tensor first'''
             return x * Tensor(bernoulli, dtype=x.dtype, requires_grad=False)
         else:
             return x
