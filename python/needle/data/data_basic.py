@@ -65,7 +65,6 @@ class DataLoader:
             np.random.shuffle(indexes)
             self.ordering = np.array_split(indexes, 
                                            range(self.batch_size, len(self.dataset), self.batch_size))
-        # print('ordering:', self.ordering)
         self.batch_index = -1
         ### END YOUR SOLUTION
         return self

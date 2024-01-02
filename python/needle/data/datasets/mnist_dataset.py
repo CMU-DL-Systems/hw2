@@ -22,7 +22,6 @@ class MNISTDataset(Dataset):
             min_val = imgs.min()
             max_val = imgs.max()
             imgs = (imgs - min_val) / (max_val - min_val)
-            imgs = np.reshape(imgs, (imgs.shape[0], 28, 28))
 
         with gzip.open(label_filename, 'rb') as label_file:
             label_data = label_file.read()
@@ -34,7 +33,11 @@ class MNISTDataset(Dataset):
 
     def __getitem__(self, index) -> object:
         ### BEGIN YOUR SOLUTION
-        return super().apply_transforms(self.imgs[index]), self.labels[index].reshape(-1)
+        imgs = self.imgs[index]
+        origin_shape = imgs.shape
+        imgs = super().apply_transforms(imgs.reshape((*origin_shape[:-1], 28, 28, 1))).reshape(origin_shape)
+        labels = self.labels[index]
+        return imgs, labels
         ### END YOUR SOLUTION
 
     def __len__(self) -> int:
